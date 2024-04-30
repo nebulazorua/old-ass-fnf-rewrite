@@ -1,0 +1,4 @@
+function create(){
+  this.loadJSON(Paths.json('characters/data/pico'), JSONType.ANDROMEDA_LEGACY);
+  this.flipX = true;
+}

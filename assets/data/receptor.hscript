@@ -1,0 +1,150 @@
+importClass("haxe.ds.ObjectMap");
+var angles = [
+    90,
+    0,
+    -180,
+    -90
+];
+
+var overlay:FlxSprite;
+
+var holdExplosion:FlxSprite;
+
+var explosions:Array<FlxSprite> = [];
+var explosionNames:Array<String> = ["sick","good","bad","shit"];
+var explosionTweens:Map<FlxSprite, FlxTween> = new ObjectMap();
+
+var pressTween:FlxTween;
+
+function confirmCommand(params:Map<String, Any>){
+  var note = params.get("note");
+
+  if(note.duration == 0){
+    var judge = note.hitResult.judgement;
+    var judgeIndex = Judgements.judgableJudgements.indexOf(judge);
+    var explosion = explosions[judgeIndex];
+    if(explosionTweens.exists(explosion))
+      explosionTweens.get(explosion).cancel();
+
+    explosion.scale.x = 1.7 * 1.1;
+    explosion.scale.y = 1.7 * 1.1;
+    explosion.alpha = 1.2;
+
+    explosionTweens.set(explosion,  FlxTween.tween(explosion, {"alpha": 0, "scale.x": 1.7, "scale.y": 1.7}, 0.15, {
+        ease: FlxEase.quadIn,
+        onComplete: function(tw:FlxTween){
+          explosionTweens.remove(explosion);
+        }
+      })
+    );
+  }else{
+    if(explosionTweens.exists(holdExplosion))
+      explosionTweens.get(holdExplosion).cancel();
+
+      holdExplosion.scale.x = 1.7 * 1.1;
+      holdExplosion.scale.y = 1.7 * 1.1;
+      holdExplosion.alpha = 1.2;
+
+      explosionTweens.set(holdExplosion,  FlxTween.tween(holdExplosion, {"alpha": 0, "scale.x": 1.7, "scale.y": 1.7}, (conductor.stepCrochet/1000) * 2, {
+        ease: FlxEase.quadIn,
+        onComplete: function(tw:FlxTween){
+          explosionTweens.remove(holdExplosion);
+        }
+      }));
+    
+  }
+}
+
+function pressCommand(params:Map<String,Any>){
+  if(pressTween!=null)pressTween.cancel();
+  this.scale.set(0.8 * 1.7, 0.8 * 1.7);
+  pressTween = FlxTween.tween(this, {"scale.x": 1.7, "scale.y": 1.7}, 0.11, {
+    ease: FlxEase.linear,
+    onComplete: function(tw:FlxTween){
+      pressTween = null;
+    }
+  });
+}
+
+function beatHit(beat:Int){
+  this.animation.curAnim.curFrame += 1;
+  if(this.animation.curAnim.curFrame > 3)
+    this.animation.curAnim.curFrame = 0;
+
+  overlay.alpha = 0.3;
+  FlxTween.tween(overlay, {"alpha": 0}, (conductor.crochet / 1000) * 0.5, {
+    ease: FlxEase.linear
+  });
+
+}
+
+function create(direction:Int) {
+  this.loadGraphic(Paths.image("images/receptors"), true, 64, 64);
+  this.animation.add("idle", [0, 1, 2, 3], 0, true);
+  this.playAnim("idle", true);
+  this.angle = angles[direction];
+  this.antialiasing = true;
+  this.alpha = 1;
+  this.setGraphicSize(Std.int(this.width * 1.7));
+  this.updateHitbox();
+
+  overlay = new FlxSprite(this.x, this.y);
+  overlay.loadGraphic(Paths.image("images/receptors"), true, 64, 64);
+  overlay.animation.add("idle", [0, 1, 2, 3], 0, true);
+  overlay.animation.play("idle", true);
+  overlay.angle = angles[direction];
+  overlay.antialiasing = true;
+  overlay.setGraphicSize(Std.int(this.width));
+  overlay.updateHitbox();
+  overlay.blend = BlendMode.ADD;
+  overlay.alpha = 0;
+
+  for(idx in 0...explosionNames.length){
+    var name = explosionNames[idx];
+    var explosion = new FlxSprite(this.x, this.y);
+    explosion.loadGraphic(Paths.image("images/" + name + "Explosion"));
+    explosion.angle = angles[direction];
+    explosion.antialiasing = true;
+    explosion.setGraphicSize(Std.int(this.width));
+    explosion.updateHitbox();
+    explosion.alpha = 0;
+    explosions[idx] = explosion;
+  }
+  holdExplosion = new FlxSprite(this.x, this.y);
+  holdExplosion.loadGraphic(Paths.image("images/holdExplosion"));
+  holdExplosion.angle = angles[direction];
+  holdExplosion.antialiasing = true;
+  holdExplosion.setGraphicSize(Std.int(this.width));
+  holdExplosion.updateHitbox();
+  holdExplosion.alpha = 0;
+
+  conductor.onBeat.add(beatHit);
+}
+
+function postDraw(){
+  overlay.x = this.x;
+  overlay.y = this.y;
+  overlay.angle = this.angle;
+  overlay.animation.curAnim.curFrame = this.animation.curAnim.curFrame;
+  overlay.draw();
+  for(explosion in explosions){
+    explosion.x = this.x;
+    explosion.y = this.y;
+    explosion.angle = this.angle;
+    explosion.draw();
+  }
+  holdExplosion.x = this.x;
+  holdExplosion.y = this.y;
+  holdExplosion.angle = this.angle;
+  holdExplosion.draw();
+
+}
+
+function destroy(){
+  conductor.onBeat.remove(onBeat);
+  overlay.destroy();
+  for(explosion in explosions)
+    explosion.destroy();
+  holdExplosion.destroy();
+
+}

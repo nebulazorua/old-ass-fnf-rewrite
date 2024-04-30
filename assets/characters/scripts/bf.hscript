@@ -1,0 +1,3 @@
+function create(){
+  this.loadJSON(Paths.json('characters/data/bf'), JSONType.ANDROMEDA_LEGACY);
+}

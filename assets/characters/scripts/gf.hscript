@@ -1,0 +1,7 @@
+function create(){
+  this.loadJSON(Paths.json('characters/data/gf'), JSONType.PSYCH);
+  if(FlxG.state.gf != this){
+    this.setPosition(FlxG.state.gf.x, FlxG.state.gf.y);
+    FlxG.state.gf.visible = false;
+  }
+}
